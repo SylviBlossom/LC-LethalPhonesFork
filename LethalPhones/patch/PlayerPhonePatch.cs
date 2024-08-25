@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Scoops.misc;
 using System.Reflection;
 using System.Reflection.Emit;
+using Steamworks;
 
 namespace Scoops.patch;
 
@@ -121,9 +122,15 @@ public class PlayerPhonePatch
     [HarmonyPostfix]
     private static void InitPhone(ref PlayerControllerB __instance)
     {
+        string saveId = __instance.playerClientId.ToString();
+        if (!GameNetworkManager.Instance.disableSteam)
+        {
+            saveId = SteamClient.SteamId.Value.ToString();
+        }
+
         PhoneManager = PhoneNetworkHandler.Instance;
         NetworkObject phone = __instance.transform.Find("PhonePrefab(Clone)").GetComponent<NetworkObject>();
-        PhoneManager.CreateNewPhone(phone.NetworkObjectId);
+        PhoneManager.CreateNewPhone(phone.NetworkObjectId, Config.preferredNumber.Value, saveId);
 
         Plugin.InputActionInstance.TogglePhoneKey.performed += OnTogglePhoneKeyPressed;
         Plugin.InputActionInstance.PickupPhoneKey.performed += OnPickupPhoneKeyPressed;

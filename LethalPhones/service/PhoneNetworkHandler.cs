@@ -17,6 +17,7 @@ namespace Scoops.service
 
         private Dictionary<string, ulong> phoneNumberDict;
         private Dictionary<string, PhoneBehavior> phoneObjectDict;
+        private Dictionary<string, string> savedPhoneDict;
 
         public PlayerPhone localPhone;
 
@@ -34,25 +35,44 @@ namespace Scoops.service
 
             phoneNumberDict = new Dictionary<string, ulong>();
             phoneObjectDict = new Dictionary<string, PhoneBehavior>();
+            savedPhoneDict = new Dictionary<string, string>();
 
             base.OnNetworkSpawn();
+
+            LoadNumbers();
         }
 
-        public void CreateNewPhone(ulong phoneId)
+        public void CreateNewPhone(ulong phoneId, string preferredNumber = null, string saveId = null)
         {
-            CreateNewPhoneNumberServerRpc(phoneId);
+            CreateNewPhoneNumberServerRpc(phoneId, preferredNumber, saveId);
         }
 
         [ServerRpc(RequireOwnership = false)]
-        public void CreateNewPhoneNumberServerRpc(ulong phoneId, ServerRpcParams serverRpcParams = default)
+        public void CreateNewPhoneNumberServerRpc(ulong phoneId, string preferredNumber = null, string saveId = null, ServerRpcParams serverRpcParams = default)
         {
             ulong clientId = serverRpcParams.Receive.SenderClientId;
-            int phoneNumber = Random.Range(0, 10000); ;
+
+            int phoneNumber = Random.Range(0, 10000);
             string phoneString = phoneNumber.ToString("D4");
-            while (phoneNumberDict.ContainsKey(phoneNumber.ToString()))
+
+            if (Config.allowPreferredNumbers.Value && preferredNumber != null && ValidatePhoneNumber(preferredNumber) && !phoneNumberDict.ContainsKey(preferredNumber))
+            {
+                phoneString = preferredNumber;
+            }
+            else if (Config.savePhoneNumbers.Value && saveId != null && savedPhoneDict.ContainsKey(saveId))
+            {
+                phoneString = savedPhoneDict[saveId];
+            }
+
+            while (phoneNumberDict.ContainsKey(phoneString))
             {
                 phoneNumber = Random.Range(0, 10000);
                 phoneString = phoneNumber.ToString("D4");
+            }
+
+            if (saveId != null)
+            {
+                savedPhoneDict[saveId] = phoneString;
             }
 
             PhoneBehavior phone = GetNetworkObject(phoneId).GetComponent<PhoneBehavior>();
@@ -63,6 +83,11 @@ namespace Scoops.service
             phoneObjectDict.Add(phoneString, phone);
 
             phone.SetNewPhoneNumberClientRpc(phoneString);
+        }
+
+        private bool ValidatePhoneNumber(string phoneString)
+        {
+            return phoneString.Length == 4 && phoneString.All(char.IsDigit);
         }
 
         public void DeletePlayerPhone(int playerId)
@@ -94,6 +119,31 @@ namespace Scoops.service
                 phoneObjectDict.Remove(number);
                 phoneNumberDict.Remove(number);
             }
+        }
+
+        public void LoadNumbers()
+        {
+            if (!GameNetworkManager.Instance.isHostingGame || !Config.savePhoneNumbers.Value)
+            {
+                return;
+            }
+
+            var saveKey = $"{PluginInfo.PLUGIN_GUID}_SavedPhones";
+
+            if (ES3.KeyExists(saveKey, GameNetworkManager.Instance.currentSaveFileName))
+            {
+                savedPhoneDict = ES3.Load<Dictionary<string, string>>(saveKey, GameNetworkManager.Instance.currentSaveFileName);
+            }
+        }
+
+        public void SaveNumbers()
+        {
+            if (!GameNetworkManager.Instance.isHostingGame || !Config.savePhoneNumbers.Value)
+            {
+                return;
+            }
+
+            ES3.Save($"{PluginInfo.PLUGIN_GUID}_SavedPhones", savedPhoneDict, GameNetworkManager.Instance.currentSaveFileName);
         }
 
         [ServerRpc(RequireOwnership = false)]

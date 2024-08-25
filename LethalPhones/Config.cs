@@ -11,6 +11,10 @@ namespace Scoops
         public static ConfigEntry<float> voiceSoundMod;
         public static ConfigEntry<float> deathHangupTime;
 
+        public static ConfigEntry<bool> savePhoneNumbers;
+        public static ConfigEntry<bool> allowPreferredNumbers;
+        public static ConfigEntry<string> preferredNumber;
+
         public static ConfigEntry<int> maxPhoneBugs;
         public static ConfigEntry<float> chancePhoneBug;
         public static ConfigEntry<float> minPhoneBugInterval;
@@ -53,6 +57,25 @@ namespace Scoops
                     "deathHangupTime",
                     0.5f,
                     "The time it takes (in seconds) for a call to auto-hangup after death."
+            );
+
+            savePhoneNumbers = cfg.Bind(
+                    "PhoneNumbers",
+                    "savePhoneNumbers",
+                    true,
+                    "Remembers phone numbers assigned to each player for the file."
+            );
+            allowPreferredNumbers = cfg.Bind(
+                    "PhoneNumbers",
+                    "allowPreferredNumbers",
+                    false,
+                    "Allows clients to specify a phone number to be assigned. (Host setting)"
+            );
+            preferredNumber = cfg.Bind(
+                    "PhoneNumbers",
+                    "preferredNumber",
+                    "",
+                    "Attempts to assign you this phone number (4 digits) when you join a lobby which has enabled this feature."
             );
 
             maxPhoneBugs = cfg.Bind(
