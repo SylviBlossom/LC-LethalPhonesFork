@@ -122,15 +122,19 @@ public class PlayerPhonePatch
     [HarmonyPostfix]
     private static void InitPhone(ref PlayerControllerB __instance)
     {
+        // ID to associate with this player for remembering the phone number on the file
         string saveId = __instance.playerClientId.ToString();
         if (!GameNetworkManager.Instance.disableSteam)
         {
             saveId = SteamClient.SteamId.Value.ToString();
         }
 
+        // User-specified preferred phone numbers must be enabled both locally and on the server
+        var preferredNumber = Config.enablePreferredNumbers.Value ? Config.PreferredNumber : null;
+
         PhoneManager = PhoneNetworkHandler.Instance;
         NetworkObject phone = __instance.transform.Find("PhonePrefab(Clone)").GetComponent<NetworkObject>();
-        PhoneManager.CreateNewPhone(phone.NetworkObjectId, Config.preferredNumber.Value, saveId);
+        PhoneManager.CreateNewPhone(phone.NetworkObjectId, preferredNumber, saveId);
 
         Plugin.InputActionInstance.TogglePhoneKey.performed += OnTogglePhoneKeyPressed;
         Plugin.InputActionInstance.PickupPhoneKey.performed += OnPickupPhoneKeyPressed;

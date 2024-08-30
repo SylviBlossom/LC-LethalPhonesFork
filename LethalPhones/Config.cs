@@ -4,6 +4,9 @@ namespace Scoops
 {
     public class Config
     {
+        private static string loadedPreferredNumber;
+        public static string PreferredNumber => loadedPreferredNumber ?? preferredNumber.Value;
+
         public static ConfigEntry<float> recordingStartDist;
         public static ConfigEntry<float> backgroundVoiceDist;
         public static ConfigEntry<float> eavesdropDist;
@@ -12,7 +15,8 @@ namespace Scoops
         public static ConfigEntry<float> deathHangupTime;
 
         public static ConfigEntry<bool> savePhoneNumbers;
-        public static ConfigEntry<bool> allowPreferredNumbers;
+        public static ConfigEntry<bool> enablePreferredNumbers;
+        public static ConfigEntry<bool> saveLocalPreferredNumber;
         public static ConfigEntry<string> preferredNumber;
 
         public static ConfigEntry<int> maxPhoneBugs;
@@ -59,25 +63,6 @@ namespace Scoops
                     "The time it takes (in seconds) for a call to auto-hangup after death."
             );
 
-            savePhoneNumbers = cfg.Bind(
-                    "PhoneNumbers",
-                    "savePhoneNumbers",
-                    true,
-                    "Remembers phone numbers assigned to each player for the file."
-            );
-            allowPreferredNumbers = cfg.Bind(
-                    "PhoneNumbers",
-                    "allowPreferredNumbers",
-                    false,
-                    "Allows clients to specify a phone number to be assigned. (Host setting)"
-            );
-            preferredNumber = cfg.Bind(
-                    "PhoneNumbers",
-                    "preferredNumber",
-                    "",
-                    "Attempts to assign you this phone number (4 digits) when you join a lobby which has enabled this feature."
-            );
-
             maxPhoneBugs = cfg.Bind(
                     "Enemies.HoardingBugs",                                             // Config section
                     "maxPhoneBugs",                                                     // Key of this config
@@ -102,6 +87,70 @@ namespace Scoops
                     100f,
                     "The longest time (in seconds) between calls from each Hoarding Bug."
             );
+
+            savePhoneNumbers = cfg.Bind(
+                    "PhoneNumbers",
+                    "savePhoneNumbers",
+                    true,
+                    "Remembers phone numbers assigned to each player for the file."
+            );
+            enablePreferredNumbers = cfg.Bind(
+                    "PhoneNumbers",
+                    "enablePreferredNumbers",
+                    false,
+                    "Attempts to assign players a user-specified phone number when they join a lobby which has enabled this feature."
+            );
+            saveLocalPreferredNumber = cfg.Bind(
+                    "PhoneNumbers",
+                    "saveLocalPreferredNumber",
+                    false,
+                    "When enabled, saves the preferred phone number specified in this config locally, or deletes the locally saved number if the config option is empty."
+            );
+            preferredNumber = cfg.Bind(
+                    "PhoneNumbers",
+                    "preferredNumber",
+                    "",
+                    "Attempts to assign you this phone number (4 digits) when you join a lobby which has enabled this feature.\nIf a preferred phone number has been saved locally (see above option), that will be used instead."
+            );
+
+            // Support changing preferred phone number on main menu via a config editor e.g. LethalConfig
+            preferredNumber.SettingChanged += (_, _) => SavePreferredNumber();
+            saveLocalPreferredNumber.SettingChanged += (_, _) => SavePreferredNumber();
+
+            // Immediately update preferred phone number on launch
+            LoadPreferredNumber();
+            SavePreferredNumber();
+        }
+
+        private void SavePreferredNumber()
+        {
+            if (!saveLocalPreferredNumber.Value)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(preferredNumber.Value))
+            {
+                ES3.DeleteKey($"{PluginInfo.PLUGIN_GUID}_PreferredNumber", "LCGeneralSaveData");
+
+                loadedPreferredNumber = null;
+                return;
+            }
+
+            ES3.Save($"{PluginInfo.PLUGIN_GUID}_PreferredNumber", preferredNumber.Value, "LCGeneralSaveData");
+
+            loadedPreferredNumber = preferredNumber.Value;
+        }
+
+        private void LoadPreferredNumber()
+        {
+            if (!ES3.KeyExists($"{PluginInfo.PLUGIN_GUID}_PreferredNumber", "LCGeneralSaveData"))
+            {
+                loadedPreferredNumber = null;
+                return;
+            }
+
+            loadedPreferredNumber = ES3.Load<string>($"{PluginInfo.PLUGIN_GUID}_PreferredNumber", "LCGeneralSaveData");
         }
     }
 }

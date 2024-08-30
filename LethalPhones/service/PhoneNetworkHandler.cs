@@ -52,10 +52,13 @@ namespace Scoops.service
         {
             ulong clientId = serverRpcParams.Receive.SenderClientId;
 
+            // Order of priority for number loading:
+            //   preferred phone number >> saved phone number >> random phone number
+
             int phoneNumber = Random.Range(0, 10000);
             string phoneString = phoneNumber.ToString("D4");
 
-            if (Config.allowPreferredNumbers.Value && preferredNumber != null && ValidatePhoneNumber(preferredNumber) && !phoneNumberDict.ContainsKey(preferredNumber))
+            if (Config.enablePreferredNumbers.Value && preferredNumber != null && ValidatePhoneNumber(preferredNumber))
             {
                 phoneString = preferredNumber;
             }
